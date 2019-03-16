@@ -27,32 +27,32 @@ class Board:
     def _init_board(self):
         self.raw_board = [[None] * COLS for _ in range(ROWS)]
         game_side_rows = {
+            0: GameSide.WHITE, 
             1: GameSide.WHITE, 
-            2: GameSide.WHITE, 
-            7: GameSide.BLACK,
-            8: GameSide.WHITE, 
+            6: GameSide.BLACK,
+            7: GameSide.WHITE, 
         }
 
         rows_col_to_piece = {
-            (1, 8): {
-                1: Rook,
-                2: Knight,
-                3: Bishop,
-                4: Queen,
-                5: King,
-                6: Bishop,
-                7: Knight,
-                8: Rook
+            (0, 7): {
+                0: Rook,
+                1: Knight,
+                2: Bishop,
+                3: Queen,
+                4: King,
+                5: Bishop,
+                6: Knight,
+                7: Rook
             },
-            (2, 7):  {
+            (1, 6):  {
+                0: Pawn,
                 1: Pawn,
                 2: Pawn,
                 3: Pawn,
                 4: Pawn,
                 5: Pawn,
                 6: Pawn,
-                7: Pawn,
-                8: Pawn
+                7: Pawn
             }, 
         }
 
@@ -61,13 +61,10 @@ class Board:
             for row in rows:
                 for col in col_to_piece:
                     piece_type = col_to_piece[col]
-                    self.raw_board[row - 1][col - 1] = piece_type(
-                        (row - 1, col - 1), 
+                    self.raw_board[row ][col] = piece_type(
+                        (row, col), 
                         game_side_rows[row]
                     )
-        
-    def insert_piece(self, piece, pos):
-        pass
 
     def get_piece(self, pos):
         row, col = pos
@@ -79,3 +76,4 @@ class Board:
 if __name__ == "__main__":
     board = Board()
     print(board)
+    print(board.get_piece((0, 2))) # should be white bishop

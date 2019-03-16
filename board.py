@@ -1,9 +1,7 @@
 from enum import Enum 
 
+import constants as c
 from pieces import Pawn, Rook, Knight, Bishop, Queen, King
-
-ROWS = 8
-COLS = 8
 
 class GameSide(Enum):
     WHITE = "W"
@@ -25,7 +23,7 @@ class Board:
         return "\n".join(board_rep)
 
     def _init_board(self):
-        self.raw_board = [[None] * COLS for _ in range(ROWS)]
+        self.raw_board = [[None] * c.SIZE for _ in range(c.SIZE)]
         game_side_rows = {
             0: GameSide.WHITE, 
             1: GameSide.WHITE, 

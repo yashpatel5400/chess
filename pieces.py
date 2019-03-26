@@ -1,3 +1,6 @@
+import copy
+from enum import Enum
+
 import constants as c
 
 class Coord(Enum):
@@ -16,83 +19,65 @@ class Piece:
         return f"{self.side.value}{self.name}({chr(START_CHAR + col + 1)}{row + 1})"
 
     def opponent_piece(self, piece):
-        return piece.side == self.side
+        return piece.side != self.side
 
-    def _generic_moves(self, board, radius, fixed_coord):
-        r_pos, r_neg = radius # radius of forward and backward movement resp.
-        fixed = self.pos[0] if fixed_coord is None else self.pos[fixed_coord.value]
-        
-        lower_bound = -1
-        upper_bound = c.SIZE
-
-        # 1) find restrictions in movement due to piece positions
-        for coord in range(c.SIZE):
-            if coord == fixed:
-                continue
-
-            # max below you, min above you
-            pos = (None, None)
-
-            if fixed_coord is None:
-                pos[0] = coord
-                pos[1] = coord
-            else:
-                pos[fixed_coord.value] = fixed
-                pos[1 - fixed_coord.value] = coord
-            
-            piece = board.get_piece(pos)
-            if piece is not None:
-                if coord < fixed: # below
-                    if self.opponent_piece(piece):
-                        lower_bound = max(coord + 1, lower_bound)
-                    else:
-                        lower_bound = max(coord, lower_bound)
-                elif coord > fixed: # above
-                    if self.opponent_piece(piece):
-                        upper_bound = min(coord + 1, upper_bound)
-                    else:
-                        upper_bound = min(coord + 1, upper_bound)
-
-        # 2) account for cases where movement is restricted either back or forward
-        if lower_bound == -1:
-            lower_bound = fixed
-        if upper_bound == c.SIZE:
-            upper_bound = fixed
-
-        # 3) account for piece movement restrictions (i.e. radius of movement)
-        lower_bound = max(fixed - r_neg, lower_bound)
-        upper_bound = min(fixed + r_pos, upper_bound)
-
-        # 4) account for board size
-        lower_bound = max(lower_bound, 0)
-        upper_bound = min(upper_bound, c.SIZE)
-
+    def _generic_moves(self, board, radius, row_incr, col_incr):
         legal = []
-        for coord in range(lower_bound, upper_bound + 1):
-            if coord == cur_row:
-                legal.append(coord)
+        cur_pos = copy.copy(self.pos)
+        while abs(self.pos[0] - cur_pos[0]) + abs(self.pos[1] - cur_pos[1]) < radius:
+            cur_pos[0] += row_incr
+            cur_pos[1] += col_incr
+            
+            if (cur_pos[Coord.ROW.value] < 0
+                    or cur_pos[Coord.ROW.value] >= c.SIZE
+                    or cur_pos[Coord.COL.value] < 0
+                    or cur_pos[Coord.COL.value] >= c.SIZE):
+                break
+
+            cur_pos_tuple = tuple(cur_pos)
+            if board.occupied(cur_pos):
+                if self.opponent_piece(board.get_piece(cur_pos)):
+                    legal.append(cur_pos_tuple)  # you are permitted to land on an opponent
+                break
+            legal.append(cur_pos_tuple)
         return legal
 
-    def vertical_moves(self, board, vert_radius):
-        return self._generic_moves(board, vert_radius, fixed_coord=Coord.COL)
+    def vertical_moves(self, board, radii):
+        up, down = radii
+        up_moves = self._generic_moves(board, up, row_incr=1, col_incr=0)
+        down_moves = self._generic_moves(board, down, row_incr=-1, col_incr=0)
+        return set(up_moves + down_moves)
 
-    def horizontal_moves(self, board, hor_radius):
-        return self._generic_moves(board, hor_radius, fixed_coord=Coord.ROW)
+    def horizontal_moves(self, board, radii):
+        left, right = radii
+        left_moves = self._generic_moves(board, left, row_incr=0, col_incr=-1)
+        right_moves = self._generic_moves(board, right, row_incr=0, col_incr=1)
+        return set(left_moves + right_moves)
 
-    def diagonal_moevs(self, board, diag_radius):
-        return self._generic_moves(board, diag_radius, fixed_coord=None)
+    def diagonal_moves(self, board, radii):
+        up_left, up_right, down_left, down_right = radii
+        up_left_moves = self._generic_moves(board, up_left, row_incr=1, col_incr=-1)
+        up_right_moves = self._generic_moves(board, up_right, row_incr=1, col_incr=1)
+        down_left_moves = self._generic_moves(board, down_left, row_incr=-1, col_incr=-1)
+        down_right_moves = self._generic_moves(board, down_right, row_incr=-1, col_incr=1)
+        return set(up_left_moves + up_right_moves + down_left_moves + down_right_moves)
 
-    def legal_moves(self, board, radius):
-          up_left,   up, up_right, \
-             left,          right, \
+    def _legal_moves(self, board, radius):
+        up_left, up, up_right, \
+        left, right, \
         down_left, down, down_right = radius
 
         # no piece has diagonal radial disparity
-        assert((up_left, down_right) == (up_right, down_left))
+        assert (up_left, down_right) == (up_right, down_left)
 
         vertical_legal = self.vertical_moves(board, (up, down))
-        horizontal_legal = self.vertical_moves(board, (left, right))
-        diagonal_legal = self.vertical_moves(board, (up_left, down_right))
+        horizontal_legal = self.horizontal_moves(board, (left, right))
+        diagonal_legal = self.diagonal_moves(
+            board, 
+            (up_left, up_right, down_left, down_right)
+        )
+
+        return set.union(vertical_legal, horizontal_legal, diagonal_legal)
 
 class Pawn(Piece):
     def __init__(self, pos, side):
@@ -113,7 +98,7 @@ class Pawn(Piece):
             0,    0,
             0, 0, 0
         ]
-        return self.legal_moves(board, radius)
+        return self._legal_moves(board, radius)
 
 class Rook(Piece):
     def __init__(self, pos, side):
@@ -125,7 +110,7 @@ class Rook(Piece):
             8,    8,
             0, 8, 0
         ]
-        return self.legal_moves(board, radius)
+        return self._legal_moves(board, radius)
 
 class Knight(Piece):
     def __init__(self, pos, side):
@@ -144,7 +129,7 @@ class Bishop(Piece):
             0,    0,
             8, 0, 8
         ]
-        return self.legal_moves(board, radius)
+        return self._legal_moves(board, radius)
 
 class Queen(Piece):
     def __init__(self, pos, side):
@@ -156,7 +141,7 @@ class Queen(Piece):
             8,    8,
             8, 8, 8
         ]
-        return self.legal_moves(board, radius)
+        return self._legal_moves(board, radius)
 
 class King(Piece):
     def __init__(self, pos, side):
@@ -168,4 +153,4 @@ class King(Piece):
             1,    1,
             1, 1, 1
         ]
-        return self.legal_moves(board, radius)
+        return self._legal_moves(board, radius)

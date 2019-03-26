@@ -60,7 +60,7 @@ class Board:
                 for col in col_to_piece:
                     piece_type = col_to_piece[col]
                     self.raw_board[row ][col] = piece_type(
-                        (row, col), 
+                        [row, col], 
                         game_side_rows[row]
                     )
 
@@ -69,9 +69,12 @@ class Board:
         return self.raw_board[row][col]
 
     def occupied(self, pos):
-        return self.get_piece(pos) is None
+        return self.get_piece(pos) is not None
 
 if __name__ == "__main__":
     board = Board()
-    print(board)
-    print(board.get_piece((0, 2))) # should be white bishop
+    white_pawn = board.get_piece((1, 2))
+    white_bishop = board.get_piece((0, 2))
+
+    print(white_pawn.legal_moves(board)) # should be empty
+    print(white_bishop.legal_moves(board)) # should be empty

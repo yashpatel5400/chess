@@ -28,7 +28,7 @@ class Board:
             0: GameSide.WHITE, 
             1: GameSide.WHITE, 
             6: GameSide.BLACK,
-            7: GameSide.WHITE, 
+            7: GameSide.BLACK, 
         }
 
         rows_col_to_piece = {
@@ -71,6 +71,25 @@ class Board:
     def occupied(self, pos):
         return self.get_piece(pos) is not None
 
+    def make_move(self, cur_pos, new_pos):
+        if not self.occupied(cur_pos):
+            print("Illegal move: position must be non-empty to make move!")
+            return
+
+        piece = self.get_piece(cur_pos)
+        if piece.side != self.side:
+            print("Illegal move: only move pieces of your own color!")
+            return
+
+        legal_moves = piece.legal_moves(self)
+        if new_pos not in legal_moves:
+            print(f"Illegal move: {new_pos} not in {legal_moves}!")
+            return
+
+        self.raw_board[cur_pos[0]][cur_pos[1]] = None
+        self.raw_board[new_pos[0]][new_pos[1]] = piece
+        self.side = GameSide.WHITE if self.side == GameSide.BLACK else GameSide.BLACK
+
 if __name__ == "__main__":
     board = Board()
     white_pawn = board.get_piece((1, 2))
@@ -78,3 +97,9 @@ if __name__ == "__main__":
 
     print(white_pawn.legal_moves(board)) # should be empty
     print(white_bishop.legal_moves(board)) # should be empty
+
+    board.make_move((3, 2), (4, 2)) # should complain about empty tile
+    board.make_move((7, 2), (6, 2)) # should complain about manipulating black piece
+    board.make_move((1, 2), (4, 2)) # should complain about illegal movement
+    board.make_move((1, 2), (3, 2)) # should work
+    board.make_move((3, 2), (4, 2)) # should complain about manipulating white piece

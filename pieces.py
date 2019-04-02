@@ -23,7 +23,7 @@ class Piece:
 
     def _generic_moves(self, board, radius, row_incr, col_incr):
         legal = []
-        cur_pos = copy.copy(self.pos)
+        cur_pos = list(self.pos)
         while abs(self.pos[0] - cur_pos[0]) + abs(self.pos[1] - cur_pos[1]) < radius:
             cur_pos[0] += row_incr
             cur_pos[1] += col_incr
@@ -93,11 +93,18 @@ class Pawn(Piece):
         top_left_r = 1 if top_left is not None and self.opponent_piece(top_left) else 0
         top_right_r = 1 if top_right is not None and self.opponent_piece(top_right) else 0
 
-        radius = [
-            top_left_r, forward, top_right_r,
-            0,    0,
-            0, 0, 0
-        ]
+        if self.side == c.GameSide.WHITE: 
+            radius = [
+                top_left_r, forward, top_right_r,
+                0,    0,
+                0, 0, 0
+            ]
+        else:
+            radius = [
+                0, 0, 0,
+                0,    0,
+                top_left_r, forward, top_right_r
+            ]
         return self._legal_moves(board, radius)
 
 class Rook(Piece):
@@ -117,7 +124,23 @@ class Knight(Piece):
         super(Knight, self).__init__("N", pos, side)
         
     def legal_moves(self, board):
-        pass
+        deltas = [
+            (1, 2), (1, -2),
+            (-1, 2), (1, -2),
+            (2, 1), (-2, 1),
+            (2, -1), (-2, -1),
+        ]
+
+        possible_moves = set()
+        for delta in deltas:
+            possible_move = (self.pos[0] + delta[0], self.pos[1] + delta[1])
+            if 0 <= possible_move[0] < c.SIZE and 0 <= possible_move[1] < c.SIZE:
+                if board.occupied(possible_move):
+                    if self.opponent_piece(board.get_piece(possible_move)):
+                        possible_moves.add(possible_move)
+                else: 
+                    possible_moves.add(possible_move)
+        return possible_moves
 
 class Bishop(Piece):
     def __init__(self, pos, side):

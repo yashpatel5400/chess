@@ -67,9 +67,6 @@ class Piece:
         left, right, \
         down_left, down, down_right = radius
 
-        # no piece has diagonal radial disparity
-        assert (up_left, down_right) == (up_right, down_left)
-
         vertical_legal = self.vertical_moves(board, (up, down))
         horizontal_legal = self.horizontal_moves(board, (left, right))
         diagonal_legal = self.diagonal_moves(
@@ -88,10 +85,18 @@ class Pawn(Piece):
         forward = 1 if self.previously_moved else 2
         cur_row, cur_col = self.pos
 
-        top_left = board.get_piece((cur_row + 1, cur_col - 1))
-        top_right = board.get_piece((cur_row + 1, cur_col + 1))
-        top_left_r = 1 if top_left is not None and self.opponent_piece(top_left) else 0
-        top_right_r = 1 if top_right is not None and self.opponent_piece(top_right) else 0
+        top_left_r = 0
+        top_right_r = 0
+        
+        if 0 <= cur_row + 1 < c.SIZE and 0 <= cur_col - 1 < c.SIZE:
+            top_left = board.get_piece((cur_row + 1, cur_col - 1))
+            if top_left is not None and self.opponent_piece(top_left) :
+                top_left_r = 1
+            
+        if 0 <= cur_row + 1 < c.SIZE and 0 <= cur_col + 1 < c.SIZE:
+            top_right = board.get_piece((cur_row + 1, cur_col + 1))
+            if top_right is not None and self.opponent_piece(top_right) :
+                top_right_r = 1
 
         if self.side == c.GameSide.WHITE: 
             radius = [

@@ -3,9 +3,13 @@ from pieces import Pawn, Rook, Knight, Bishop, Queen, King
 
 class Board:
     def __init__(self):
+        self.pieces = {
+            c.GameSide.WHITE.value: set(),
+            c.GameSide.BLACK.value: set(),
+        }
         self._init_board()
         self.side = c.GameSide.WHITE
-
+        
     def __str__(self):
         board_rep = []
         for row in self.raw_board:
@@ -14,7 +18,7 @@ class Board:
                 piece_rep = piece.__str__() if piece is not None else "_" * 6
                 cur_row.append(piece_rep)
             board_rep.append(" ".join(cur_row))
-        return "\n".join(board_rep)
+        return "\n".join(board_rep[::-1])
 
     def _init_board(self):
         self.raw_board = [[None] * c.SIZE for _ in range(c.SIZE)]
@@ -53,10 +57,14 @@ class Board:
             for row in rows:
                 for col in col_to_piece:
                     piece_type = col_to_piece[col]
-                    self.raw_board[row ][col] = piece_type(
+                    piece = piece_type(
                         (row, col), 
                         game_side_rows[row]
                     )
+
+                    self.raw_board[row][col] = piece
+                    self.pieces[game_side_rows[row].value].add(piece)
+
 
     def get_piece(self, pos):
         row, col = pos
@@ -64,6 +72,18 @@ class Board:
 
     def occupied(self, pos):
         return self.get_piece(pos) is not None
+
+    def in_check(self):
+        opposite_side = c.GameSide.WHITE if self.side == c.GameSide.BLACK else c.GameSide.BLACK
+        opposite_pieces = self.pieces[opposite_side.value]
+        # TODO: Figure out caching scheme to avoid recompute each time
+        for piece in opposite_pieces:
+            for move in piece.legal_moves(self):
+                capture_piece = self.get_piece(move)
+                if capture_piece is not None:
+                    if isinstance(capture_piece, King) and capture_piece.side == self.side:
+                        return True
+        return False
 
     def make_move(self, cur_pos, new_pos):
         if not self.occupied(cur_pos):
@@ -82,7 +102,16 @@ class Board:
 
         self.raw_board[cur_pos[0]][cur_pos[1]] = None
         self.raw_board[new_pos[0]][new_pos[1]] = piece
+        
+        if self.in_check():
+            print(f"Illegal move: move results in a check!")
+            self.raw_board[new_pos[0]][new_pos[1]] = None
+            self.raw_board[cur_pos[0]][cur_pos[1]] = piece
+            return            
+
+        piece.pos = new_pos
         self.side = c.GameSide.WHITE if self.side == c.GameSide.BLACK else c.GameSide.BLACK
+        print(f"{self.side.value} to move!")
 
 if __name__ == "__main__":
     board = Board()
@@ -92,13 +121,10 @@ if __name__ == "__main__":
 
     black_pawn = board.get_piece((6, 2))
 
-    print(white_pawn.legal_moves(board)) # should be (3, 2), (2, 2)
-    print(white_knight.legal_moves(board)) # should be ((2, 0), (2, 2))
-    print(white_bishop.legal_moves(board)) # should be empty
-    print(black_pawn.legal_moves(board)) # should be ((4, 2), (5, 2))
-
-    board.make_move((3, 2), (4, 2)) # should complain about empty tile
-    board.make_move((7, 2), (6, 2)) # should complain about manipulating black piece
-    board.make_move((1, 2), (4, 2)) # should complain about illegal movement
-    board.make_move((1, 2), (3, 2)) # should work
-    board.make_move((3, 2), (4, 2)) # should complain about manipulating white piece
+    board.make_move((1, 4), (3, 4))  # white E pawn
+    board.make_move((6, 5), (4, 5))  # black F pawn
+    board.make_move((0, 3), (4, 7))  # white queen 
+    board.make_move((6, 0), (4, 0))  # error: king is in check
+    print(board)
+    board.make_move((6, 6), (5, 6))  # legal: (blocks white queen)
+    
